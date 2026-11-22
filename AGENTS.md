@@ -140,3 +140,4 @@ The reading pack has the full rules; these are the ones not to break:
 | `docs/DATA_FORMAT.md` | the project folder and the data injected into the page |
 | `examples/demo/` | a small project: two lecture decks and their notes |
 | `skills/sigatla-read/` | the same workflow as a Claude Code skill |
+| `tests/` | `pytest`; see `CONTRIBUTING.md` before changing the tool |

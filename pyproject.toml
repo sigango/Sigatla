@@ -14,11 +14,21 @@ dependencies = [
   "anthropic>=1.0",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.urls]
+Homepage = "https://github.com/sigango/Sigatla"
+Issues = "https://github.com/sigango/Sigatla/issues"
+
 [project.scripts]
 sigatla = "sigatla.cli:main"
 
 [tool.setuptools]
-packages = ["sigatla"]
+packages = ["sigatla", "sigatla.web"]
 
 [tool.setuptools.package-data]
-sigatla = ["web/*.html"]
+"sigatla.web" = ["*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,5 +1,7 @@
 # Sigatla
 
+[![CI](https://github.com/sigango/Sigatla/actions/workflows/ci.yml/badge.svg)](https://github.com/sigango/Sigatla/actions/workflows/ci.yml)
+
 Sigatla turns research papers and lecture slides into an **atlas**: an interactive 3D map of study notes in which
 every note is linked to the others and every link says why the two notes are related.
 
@@ -27,6 +29,7 @@ data", is the sun.*
 - [Your files and copyright](#your-files-and-copyright)
 - [Limitations](#limitations)
 - [Repository layout](#repository-layout)
+- [Contributing](#contributing)
 - [License](#license)
 
 ## Why Sigatla
@@ -371,6 +374,13 @@ themselves are not part of this repository.
 | `AGENTS.md`, `skills/sigatla-read/` | the guide for AI assistants, and the same workflow as a Claude Code skill |
 | `docs/`, `schema/` | the notes form, the data format, and the JSON Schema |
 | `examples/demo/` | a small project with two lecture decks and their notes |
+| `tests/` | `pytest` tests, run by continuous integration on Linux, macOS, and Windows |
+
+## Contributing
+
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how to set up the code, which checks a
+pull request needs, and how changes are reviewed. Every pull request is tested on Linux, macOS, and Windows
+before it is merged.
 
 ## License
 
