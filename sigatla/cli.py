@@ -234,7 +234,16 @@ def cmd_update(args):
     build_site(p)
 
 
+def _utf8_output():
+    """Print UTF-8 even where the stream defaults to another code page (a pipe on Windows), so Vietnamese
+    notes and math symbols reach the assistant that reads the output."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure") and (stream.encoding or "").lower().replace("-", "") != "utf8":
+            stream.reconfigure(encoding="utf-8")
+
+
 def main(argv=None) -> int:
+    _utf8_output()
     ap = argparse.ArgumentParser(prog="sigatla", description="Turn papers and lecture slides into an interactive 3D map of notes.")
     ap.add_argument("--version", action="version", version=f"sigatla {__version__}")
     ap.add_argument("-C", "--dir", help="project folder (default: the current folder or a parent with atlas.json)")
