@@ -48,7 +48,9 @@ Sigatla splits the work between a tool and an AI assistant:
   on. Any assistant that can run shell commands and read files can do this (Claude Code, Codex, Cursor, Copilot,
   Gemini, and others), or the tool can call the Claude API directly.
 
-The result is a static website you can open offline, put on any static host, and extend as the course goes on.
+The result is a static website: open `site/index.html` in a browser or put the folder on any static host, and
+extend it as the course goes on. No server is needed, but the page loads its 3D and math libraries from public
+CDNs, so it needs an internet connection.
 It is meant for learning a course from its slides, preparing an exam, a thesis defense, or a research interview,
 and seeing how a set of papers fits together.
 
