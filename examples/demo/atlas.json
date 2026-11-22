@@ -1,0 +1,10 @@
+{
+ "title": "Explaining Vision Models",
+ "subtitle": "A demo course in two lectures",
+ "language": "en",
+ "model": "claude-opus-5-5",
+ "sources": [
+  {"id": "saliency-l1", "kind": "slides", "file": "sources/saliency-lecture.pdf", "label": "Lecture 1 · Saliency maps"},
+  {"id": "evaluation-l2", "kind": "slides", "file": "sources/evaluation-lecture.pdf", "label": "Lecture 2 · Evaluating explanations"}
+ ]
+}

@@ -1,0 +1,184 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "notes/_shared.json",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "axis",
+  "nodes",
+  "links"
+ ],
+ "properties": {
+  "axis": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "title",
+    "short",
+    "body",
+    "questions"
+   ],
+   "properties": {
+    "title": {
+     "type": "string"
+    },
+    "short": {
+     "type": "string"
+    },
+    "body": {
+     "type": "string"
+    },
+    "questions": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "nodes": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "type",
+     "title",
+     "short",
+     "body",
+     "questions",
+     "figures",
+     "pages",
+     "links"
+    ],
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "concept",
+       "method",
+       "formula",
+       "design",
+       "result",
+       "limitation",
+       "data",
+       "example",
+       "related"
+      ]
+     },
+     "title": {
+      "type": "string"
+     },
+     "short": {
+      "type": "string"
+     },
+     "body": {
+      "type": "string"
+     },
+     "questions": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "figures": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "pages": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     },
+     "links": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "to",
+        "rel",
+        "note"
+       ],
+       "properties": {
+        "to": {
+         "type": "string"
+        },
+        "rel": {
+         "type": "string",
+         "enum": [
+          "part_of",
+          "uses",
+          "extends",
+          "motivates",
+          "contrasts",
+          "measures",
+          "tests",
+          "limits",
+          "supports",
+          "refutes",
+          "cites",
+          "frames",
+          "complements"
+         ]
+        },
+        "note": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "links": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "from",
+     "to",
+     "rel",
+     "note"
+    ],
+    "properties": {
+     "from": {
+      "type": "string"
+     },
+     "to": {
+      "type": "string"
+     },
+     "rel": {
+      "type": "string",
+      "enum": [
+       "part_of",
+       "uses",
+       "extends",
+       "motivates",
+       "contrasts",
+       "measures",
+       "tests",
+       "limits",
+       "supports",
+       "refutes",
+       "cites",
+       "frames",
+       "complements"
+      ]
+     },
+     "note": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

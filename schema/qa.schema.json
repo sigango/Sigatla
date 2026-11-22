@@ -1,0 +1,36 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "notes/_qa.json",
+ "type": "array",
+ "items": {
+  "type": "object",
+  "required": [
+   "node",
+   "q",
+   "a"
+  ],
+  "properties": {
+   "node": {
+    "type": "string"
+   },
+   "link": {
+    "type": "string"
+   },
+   "path": {
+    "type": "string"
+   },
+   "q": {
+    "type": "string"
+   },
+   "a": {
+    "type": "string"
+   },
+   "source": {
+    "type": "string"
+   },
+   "at": {
+    "type": "string"
+   }
+  }
+ }
+}

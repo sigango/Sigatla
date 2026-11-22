@@ -1,0 +1,652 @@
+{
+ "source": {
+  "title": "Saliency maps and how to check them",
+  "authors": "",
+  "year": "",
+  "summary": "### Overview\nThis lecture shows how to compute saliency maps and how to check whether a map is faithful to the model. It introduces saliency maps, which give every input pixel or region a score for how strongly the model's output depends on it, and shows three ways to compute them: **gradient saliency**, **Grad-CAM** and **Integrated Gradients**. The second half asks whether a map is faithful to the model rather than merely plausible to people, and presents two checks: **deletion curves** and **model randomization**. A worked example compares a map's ranking of four patches with the score drop each patch causes, using Spearman's rank correlation. A pitfalls slide warns that plausible is not faithful, that removal creates out-of-distribution inputs, that baselines and normalization change the rankings of methods, and that a map should always be compared against a simple reference map. The slides cite no papers and no datasets.\n\n### Learning goals\n- Compute three saliency maps: gradient, Grad-CAM and Integrated Gradients (slides 1 and 10).\n- Test whether a map is faithful to the model (slide 1), with deletion curves and model randomization (slide 10).",
+  "questions": [
+   "Why can a gradient be small where the effect of an input region is large, and what does this mean for gradient saliency maps?",
+   "What does the completeness property of Integrated Gradients guarantee, and what does it not guarantee?",
+   "Why might a deletion score reward a saliency map for the wrong reason, and what does the lecture advise to guard against it?",
+   "How do the deletion check and the model-randomization check differ in what they perturb and in which failure of a saliency map they detect?"
+  ]
+ },
+ "nodes": [
+  {
+   "id": "saliency-l1.saliency-map",
+   "type": "concept",
+   "title": "Saliency map",
+   "short": "A saliency map gives every input pixel or region a score for how strongly the model's output depends on it.",
+   "body": "### What it is\nThe lecture defines a saliency map as a score for every input pixel or region of an image. A **high score** means that the model's output depends strongly on that region. The slide illustrates this with a small grid of regions shaded by their saliency.\n\n![Saliency per region, shaded from low to high](fig:saliency-l1/slide-2)\n\n### What it is used for\nSlide 2 lists three uses:\n- **debugging models**,\n- **finding shortcuts**,\n- **explaining single predictions**.\n\n### The caveat that drives the lecture\nThe same slide warns that a map can look plausible to people and still not reflect the model. This is why the lecture does not stop at computing maps (slides 3 to 5) but also checks them (deletion curves on slide 6, model randomization on slide 7).\n\n### Intuition\nInterpretation: a saliency map answers \"where did the model look for this decision?\" for one input and one output. The phrase \"depends strongly\" is left informal on slide 2; each of the three methods makes it precise in its own way: a local input gradient, pooled gradients of feature maps, or gradients integrated from a baseline image.\n\nInterpretation: \"shortcut\" is not defined on the slides; it most likely means a spurious cue (for example a watermark or a background) that the model relies on instead of the object, which a map could reveal.",
+   "questions": [
+    "How does the lecture define a saliency map, and what does a high score mean?",
+    "Name the three uses of saliency maps listed in the lecture.",
+    "Why is a visually convincing saliency map not enough reason to trust it?"
+   ],
+   "figures": [
+    "saliency-l1/slide-2"
+   ],
+   "pages": [
+    2
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.gradient-saliency",
+     "rel": "frames",
+     "note": "Gradient saliency is the first of the three methods; it makes 'depends strongly' concrete as the size of the input gradient of the class score."
+    },
+    {
+     "to": "saliency-l1.grad-cam",
+     "rel": "frames",
+     "note": "Grad-CAM is the second method; it scores regions of the last convolutional layer's grid rather than single pixels."
+    },
+    {
+     "to": "saliency-l1.integrated-gradients",
+     "rel": "frames",
+     "note": "Integrated Gradients is the third method; it scores each input feature relative to a baseline image."
+    },
+    {
+     "to": "saliency-l1.faithfulness",
+     "rel": "motivates",
+     "note": "Slide 2's caveat that a map can look plausible yet not reflect the model is why the lecture needs a notion of faithfulness and tests for it."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.faithfulness",
+   "type": "concept",
+   "title": "Faithfulness of a saliency map",
+   "short": "A map is faithful when it reflects what the model actually depends on; the lecture tests this with deletion curves and model randomization.",
+   "body": "### What it is\nThe second goal of the lecture (slide 1) is to test whether a map is **faithful to the model**. The slides use the word for a map that reflects the model itself: the regions it scores highly are the ones the model's output really depends on (the definition of slide 2). Slides 2 and 9 contrast this with **plausibility**, whether a map looks right to people, which slide 9 calls a different question.\n\n### How the lecture tests it\nThe summary slide names two checks:\n- **Deletion curves** (slide 6): remove regions in order of saliency; a faithful map makes the class score drop fast, giving a small area under the curve.\n- **Model randomization** (slide 7): re-initialize the weights layer by layer; a map that barely changes does not depend on what the model learned.\n\nSlide 9 adds a rule for any such test: always compare against a simple reference map.\n\n### Why it matters\nInterpretation: the two checks probe different failures. Deletion asks whether the map's ordering of regions agrees with the model's behavior on this input. Randomization asks whether the map depends on the learned weights at all. A map can pass one and fail the other, so the lecture presents both.\n\nInterpretation: the slides give no formal definition of faithfulness; it is defined operationally, through these checks. They also give no single faithfulness score that combines them.",
+   "questions": [
+    "What does it mean for a saliency map to be faithful to the model, according to the lecture?",
+    "Which two checks does the lecture use to test faithfulness, and what failure does each one detect?",
+    "Why is faithfulness a different question from agreement with human judgement?"
+   ],
+   "figures": [
+    "saliency-l1/slide-1",
+    "saliency-l1/slide-10"
+   ],
+   "pages": [
+    1,
+    2,
+    9,
+    10
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.plausible-not-faithful",
+     "rel": "contrasts",
+     "note": "Faithfulness concerns what the model depends on; plausibility is agreement with people, which slide 9 calls a different question."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.plausible-not-faithful",
+   "type": "limitation",
+   "title": "Plausible is not faithful",
+   "short": "A saliency map can look convincing to people and still not reflect what the model uses.",
+   "body": "### The pitfall\nSlide 2 warns that a map can look plausible to people and still not reflect the model. Slide 9 repeats it as the first pitfall: plausible is not faithful, and agreement with people is a different question.\n\n### What it affects\n- The uses listed on slide 2 (**debugging models**, **finding shortcuts**, **explaining single predictions**) all assume that the map reflects the model. A map that only looks right supports none of them.\n- Interpretation: judging or choosing methods by how sensible their maps look to humans rewards plausibility, not faithfulness.\n\n### Evidence in the lecture\nSlide 7 gives the concrete case: some popular methods look almost the same after the model's weights are randomized. Such maps keep looking plausible although they cannot reflect what the model learned.\n\n### What addresses it (from the lecture)\nTest maps against the model rather than against people: deletion curves (slide 6), model randomization (slide 7), and a comparison with a simple reference map (slide 9).\n\n### Intuition\nInterpretation: maps often highlight the object a person expects to see, for instance its edges or outline. That structure can come from the input image itself rather than from the model's reasoning, which is exactly why a human's sense that a map \"looks right\" cannot replace a faithfulness test.",
+   "questions": [
+    "Why does the lecture insist that plausible is not faithful?",
+    "Which uses of saliency maps listed on slide 2 break down if a map is plausible but not faithful?",
+    "Which result in the lecture shows that popular methods can produce plausible maps that do not reflect the model?"
+   ],
+   "figures": [
+    "saliency-l1/slide-2",
+    "saliency-l1/slide-9",
+    "saliency-l1/slide-7"
+   ],
+   "pages": [
+    2,
+    7,
+    9
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.saliency-map",
+     "rel": "limits",
+     "note": "It limits the uses listed on slide 2 (debugging, finding shortcuts, explaining predictions), which all assume the map reflects the model rather than only looking convincing."
+    },
+    {
+     "to": "saliency-l1.model-randomization-check",
+     "rel": "motivates",
+     "note": "Randomizing the weights exposes maps whose convincing look does not come from what the model learned."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.gradient-saliency",
+   "type": "method",
+   "title": "Gradient saliency",
+   "short": "Gradient saliency scores each input pixel by the absolute gradient of the class score with respect to that pixel, at the cost of one backward pass.",
+   "body": "### Inputs and output\n- **Inputs:** a trained model, an input image $x$, and a class $c$ whose score $f_c(x)$ is to be explained.\n- **Output:** a map $S(x)$ with one value per input element: the absolute value of the gradient of $f_c$ with respect to that element (see the formula note).\n\n### Steps\n1. Run the model on $x$ and take the score of class $c$.\n2. Back-propagate that score to the input: **one backward pass**.\n3. Take the absolute value of the gradient at every input element.\n\n### Properties stated on slide 3\n- **Cheap:** one backward pass.\n- **Noisy and sensitive to saturation:** a large effect can have a small gradient (see the saturation note).\n\n### Why it is built this way\nInterpretation: the gradient says how much the class score would change for an infinitesimal change of each pixel, which is the most direct reading of slide 2's \"the output depends strongly on that region\". The absolute value keeps the size and drops the sign, so the map shows how sensitive the score is to a pixel, not whether the pixel raises or lowers it.\n\nInterpretation: the slide does not say how the color channels of a pixel are combined into one map value, or whether $f_c$ is a logit or a probability.",
+   "questions": [
+    "What does gradient saliency compute, and why does it need only one backward pass?",
+    "Why does the gradient saliency map use the absolute value of the gradient?",
+    "Which two weaknesses of gradient saliency does the lecture point out?"
+   ],
+   "figures": [
+    "saliency-l1/slide-3"
+   ],
+   "pages": [
+    3
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.gradient-saliency-formula",
+     "rel": "uses",
+     "note": "The method computes S(x) = |∂f_c(x)/∂x| with one backward pass."
+    },
+    {
+     "to": "saliency-l1.grad-cam",
+     "rel": "contrasts",
+     "note": "Gradient saliency differentiates with respect to input pixels and has pixel resolution; Grad-CAM pools gradients of last-layer feature maps and is coarse but class-discriminative."
+    },
+    {
+     "to": "saliency-l1.integrated-gradients",
+     "rel": "contrasts",
+     "note": "Gradient saliency uses one local gradient at x; Integrated Gradients accumulates gradients along a path from a baseline x' and satisfies completeness, but depends on the baseline."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.gradient-saliency-formula",
+   "type": "formula",
+   "title": "Gradient saliency formula",
+   "short": "S(x) is the absolute value of the derivative of the class-c score with respect to the input image.",
+   "body": "### Formula\n$$S(x) = \\left| \\frac{\\partial f_c(x)}{\\partial x} \\right|$$\n\n### Symbols\n- $S(x)$: the saliency map for the input $x$, one value per input element.\n- $f_c(x)$: the score of class $c$ for the input $x$ (slide 3).\n- $c$: the class whose score is explained.\n- $x$: the input image (slide 3).\n- $\\partial f_c(x) / \\partial x$: the gradient of the class score with respect to every input element, obtained with one backward pass.\n- $|\\cdot|$: the absolute value, taken element by element.\n\n### Meaning\nThe map is large where a tiny change of a pixel would change the class score a lot. It measures **local sensitivity** of the score at the point $x$.\n\n### Why this form\nThe slide motivates the form by its cost: one backward pass. Interpretation: the gradient is a first-order (linear) description of how the score responds to each pixel, valid only for very small changes around $x$. It says nothing directly about a large change such as removing a region. This is the root of the saturation problem on the same slide: if the score has already flattened out around $x$, the slope is small even where the pixel matters a great deal.",
+   "questions": [
+    "Explain every symbol in S(x) = |∂f_c(x)/∂x|.",
+    "What does the gradient measure, and why is that different from the effect of removing a region?",
+    "Why is the gradient saliency map cheap to compute?"
+   ],
+   "figures": [
+    "saliency-l1/slide-3"
+   ],
+   "pages": [
+    3
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.ig-formula",
+     "rel": "contrasts",
+     "note": "Both use the input gradient, but Integrated Gradients integrates it along the path from x' to x and multiplies by (x_i − x'_i), instead of evaluating it only at x."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.gradient-saturation",
+   "type": "limitation",
+   "title": "Saturation: small gradient, large effect",
+   "short": "Plain gradients are noisy and can miss features whose effect has saturated, because a large effect can have a small local gradient.",
+   "body": "### The limitation\nSlide 3 states that gradient saliency is **noisy** and **sensitive to saturation**: a large effect can have a small gradient. The summary slide makes this exam question Q1: why can a gradient be small where the effect is large? The slides pose the question without answering it.\n\n### Why it happens\nInterpretation: the gradient is the local slope of the class score at the current input. If the score has already flattened out (saturated), for example because a feature is present so strongly that more of it no longer raises the output, the slope at $x$ is close to zero. Removing that feature entirely could still change the score a lot. The gradient describes infinitesimal changes, while an \"effect\" in the deletion sense of slide 6 is a large, finite change.\n\n### What it affects\n- Interpretation: gradient maps can give low saliency to regions the model relies on, so they could look unfaithful under the deletion check of slide 6.\n- The slide also calls the maps noisy. The slides do not explain where the noise comes from.\n\n### What could address it\nInterpretation: Integrated Gradients (slide 5) accumulates gradients along the whole path from a baseline $x'$ to $x$, so a feature whose effect happens early on the path, before saturation, still receives credit, and completeness ties the total attribution to $f(x) - f(x')$. The slides do not present IG explicitly as the fix for saturation; this connection is an interpretation of the two formulas.",
+   "questions": [
+    "Why can a gradient be small where the effect of a pixel is large?",
+    "How would saturation show up when a gradient saliency map is evaluated with the deletion metric?",
+    "How does integrating gradients along a path from a baseline help with saturation?"
+   ],
+   "figures": [
+    "saliency-l1/slide-3",
+    "saliency-l1/slide-10"
+   ],
+   "pages": [
+    3,
+    10
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.gradient-saliency",
+     "rel": "limits",
+     "note": "Because the local gradient can be small where the effect is large, gradient maps can under-score regions the model relies on."
+    },
+    {
+     "to": "saliency-l1.integrated-gradients",
+     "rel": "motivates",
+     "note": "Interpretation: integrating gradients from the baseline credits effects that occur before the output saturates; the slides do not state this motivation explicitly."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.grad-cam",
+   "type": "method",
+   "title": "Grad-CAM",
+   "short": "Grad-CAM weights the last convolutional layer's feature maps by their pooled gradients and keeps the positive part, giving a coarse, class-discriminative map.",
+   "body": "### Inputs and output\n- **Inputs:** a convolutional network, an image, a class $c$ with score $y_c$, and the feature maps $A_k$ of the last convolutional layer.\n- **Output:** a map $L$ with the resolution of the last convolutional layer, upsampled to the image (slide 4).\n\n### Steps (slide 4)\n1. Back-propagate the class score $y_c$ to the feature maps $A_k$.\n2. For each feature map $k$, pool its gradients over all positions $[i,j]$ into one weight $\\alpha_k$.\n3. Form the weighted sum $\\sum_k \\alpha_k A_k$.\n4. Apply ReLU to keep only positive evidence.\n5. Upsample the result to the image size.\n\n### Properties stated on the slide\n- **Class-discriminative:** the map depends on which class $c$ is explained.\n- **Coarse:** it has the resolution of the last convolutional layer (see the note on coarseness).\n\n### Why it is built this way\nThe slide's own reasons are short: the weights are pooled gradients, and ReLU keeps positive evidence. Interpretation: the last convolutional layer is a compromise between spatial layout and meaning: its feature maps still have positions, but each channel already responds to high-level patterns. Weighting channels by how much the class score depends on them selects those relevant to class $c$, which is why the map is class-discriminative. ReLU drops regions that would lower the class score, so the map shows evidence for the class only.\n\nThe slides do not say which upsampling method is used, and Grad-CAM needs no baseline image, unlike Integrated Gradients.",
+   "questions": [
+    "Walk through the steps of Grad-CAM from the class score to the upsampled map.",
+    "Why is Grad-CAM class-discriminative?",
+    "What is the role of the ReLU in Grad-CAM?"
+   ],
+   "figures": [
+    "saliency-l1/slide-4"
+   ],
+   "pages": [
+    4
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.grad-cam-formula",
+     "rel": "uses",
+     "note": "Grad-CAM computes the pooled weights α_k and the map L = ReLU(Σ_k α_k A_k) from slide 4."
+    },
+    {
+     "to": "saliency-l1.integrated-gradients",
+     "rel": "contrasts",
+     "note": "Grad-CAM works on internal feature maps and needs no baseline image; Integrated Gradients works on input features and depends on the baseline x'."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.grad-cam-formula",
+   "type": "formula",
+   "title": "Grad-CAM weights and map",
+   "short": "Grad-CAM averages the gradient of the class score over each feature map to get a weight, then takes the ReLU of the weighted sum of feature maps.",
+   "body": "### Formula\n$$\\alpha_k = \\frac{1}{Z} \\sum_{i,j} \\frac{\\partial y_c}{\\partial A_k[i,j]}$$\n\n$$L = \\mathrm{ReLU}\\Big( \\sum_k \\alpha_k A_k \\Big)$$\n\n### Symbols\n- $A_k$: feature map $k$ of the last convolutional layer (slide 4 says the map has the resolution of that layer).\n- $A_k[i,j]$: the activation of feature map $k$ at spatial position $(i, j)$.\n- $k$: index over the feature maps (channels).\n- $i, j$: spatial indices (row and column) in the feature map.\n- $y_c$: the score of class $c$. Interpretation: the same quantity that slide 3 writes as $f_c(x)$; the slides switch notation without comment.\n- $\\partial y_c / \\partial A_k[i,j]$: how strongly the class score responds to that single activation.\n- $Z$: a normalizing constant. The slide does not define it. Interpretation: in the usual reading it is the number of spatial positions, so that $\\alpha_k$ is the average gradient over the map (global average pooling); the slide only says \"pooled gradients\".\n- $\\alpha_k$: the weight of feature map $k$ for class $c$.\n- $\\mathrm{ReLU}(z) = \\max(0, z)$, applied element by element.\n- $L$: the Grad-CAM map, before it is upsampled to the image.\n\n### Meaning\nThe first line turns the gradient of each feature map into one number: on average, how much the class score rises when that channel is more active. The second line adds up the feature maps with these weights, so channels that support class $c$ contribute where they are active. ReLU keeps the positive evidence only (slide 4).\n\n### Why this form\nThe slide gives two reasons in parentheses: the weights are pooled gradients of feature map $k$, and ReLU keeps positive evidence. Interpretation: pooling over $i, j$ discards where the gradient is large and keeps only whether the channel matters, so the spatial detail of $L$ comes from the activations $A_k$, not from the gradients. This makes the map smoother than an input gradient but limited to the feature-map grid.",
+   "questions": [
+    "Explain every symbol in the two Grad-CAM equations.",
+    "What does the pooling over i and j do, and what information does it discard?",
+    "What would change if the ReLU were removed?"
+   ],
+   "figures": [
+    "saliency-l1/slide-4"
+   ],
+   "pages": [
+    4
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.gradient-saliency-formula",
+     "rel": "contrasts",
+     "note": "Grad-CAM differentiates the class score with respect to feature-map activations A_k[i,j] and pools the result, rather than differentiating with respect to input pixels."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.grad-cam-coarse",
+   "type": "limitation",
+   "title": "Grad-CAM is coarse",
+   "short": "Grad-CAM maps have the resolution of the last convolutional layer and are only upsampled to the image, so they cannot localise fine detail.",
+   "body": "### The limitation\nSlide 4 states that Grad-CAM has the resolution of the last convolutional layer, upsampled to the image, and sums it up as class-discriminative, but **coarse**.\n\n### What it affects\nInterpretation: each cell of the last convolutional feature map covers a large patch of the input. A Grad-CAM map can therefore say which part of the image matters (for example the object rather than the background) but not which fine structures inside that part matter. Upsampling only interpolates between cells; it adds no information. This matters for uses such as finding shortcuts (slide 2) when the shortcut is small, such as a thin mark or a few letters in a corner.\n\nThe slides do not state the size of the feature-map grid or the upsampling method.\n\n### Trade-off with the other methods\n- Gradient saliency (slide 3) gives one value per input pixel, so it is fine-grained, but noisy.\n- Integrated Gradients (slide 5) also gives one value per input feature $i$.\n\nInterpretation: the lecture thus implies a trade-off between resolution and the class-discriminative map of Grad-CAM; the slides do not compare the three methods head to head.\n\n### What could address it\nThe slides propose no fix. Interpretation: one could compute the map at an earlier layer with a finer grid, at the cost of less class-specific features, or combine Grad-CAM with a pixel-level map.",
+   "questions": [
+    "Why is a Grad-CAM map coarse, and does upsampling fix this?",
+    "For which uses of saliency maps is the coarseness of Grad-CAM a problem?",
+    "How does Grad-CAM's resolution compare with that of gradient saliency and Integrated Gradients?"
+   ],
+   "figures": [
+    "saliency-l1/slide-4"
+   ],
+   "pages": [
+    4
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.grad-cam",
+     "rel": "limits",
+     "note": "The map inherits the resolution of the last convolutional layer and is only upsampled, so it cannot resolve detail finer than one feature-map cell."
+    },
+    {
+     "to": "saliency-l1.gradient-saliency",
+     "rel": "contrasts",
+     "note": "Gradient saliency gives one value per input pixel, so it is fine-grained where Grad-CAM is coarse, though slide 3 calls it noisy."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.integrated-gradients",
+   "type": "method",
+   "title": "Integrated Gradients",
+   "short": "Integrated Gradients attributes the change from a baseline image to the input by integrating gradients along the straight path between them.",
+   "body": "### Inputs and output\n- **Inputs:** a model $f$, an input image $x$, and a **baseline image** $x'$. Slide 5 names black, blurred or noise images as baselines.\n- **Output:** one attribution $\\mathrm{IG}_i(x)$ for every input feature $i$.\n\n### Steps\n1. Choose a baseline $x'$.\n2. Form the straight path of images $x' + a\\,(x - x')$ for $a$ from 0 to 1.\n3. Along the path, take the gradient of $f$ with respect to each input feature $x_i$ and integrate it over $a$.\n4. Multiply the result by the difference $x_i - x'_i$.\n\nInterpretation: in practice the integral is approximated by a sum over a finite number of points on the path, each needing its own backward pass, so IG costs more than plain gradient saliency. The slides do not discuss this or the number of steps.\n\n### Properties stated on slide 5\n- **Completeness:** the attributions add up to $f(x) - f(x')$.\n- **Baseline dependence:** the choice of baseline changes the map.\n\n### Why it is built this way\nInterpretation: a single gradient describes only the slope at $x$ and can be small where the effect is large (slide 3). Accumulating gradients over the whole path from the baseline to the input credits features whose effect happens anywhere along the path, and completeness makes the total credit equal to the actual change of the output between $x'$ and $x$.",
+   "questions": [
+    "What are the inputs of Integrated Gradients, and what role does the baseline play?",
+    "Describe the steps needed to compute an Integrated Gradients map.",
+    "What two properties of Integrated Gradients does the lecture state?"
+   ],
+   "figures": [
+    "saliency-l1/slide-5"
+   ],
+   "pages": [
+    5
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.ig-formula",
+     "rel": "uses",
+     "note": "The method computes IG_i(x) from slide 5 for every input feature i."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.ig-formula",
+   "type": "formula",
+   "title": "Integrated Gradients formula",
+   "short": "IG_i(x) multiplies the difference between input and baseline in feature i by the gradient integrated along the straight path from baseline to input.",
+   "body": "### Formula\n$$\\mathrm{IG}_i(x) = (x_i - x'_i) \\int_0^1 \\frac{\\partial f\\big(x' + a\\,(x - x')\\big)}{\\partial x_i}\\, da$$\n\n### Symbols\n- $\\mathrm{IG}_i(x)$: the Integrated Gradients attribution of input feature $i$ for the input $x$.\n- $i$: index of an input feature. Interpretation: for images, a pixel or a pixel channel; the slide does not say.\n- $x$: the input image.\n- $x'$: the baseline image; slide 5 names black, blurred or noise images.\n- $x_i, x'_i$: the value of feature $i$ in the input and in the baseline.\n- $a$: the path parameter, from 0 (the baseline) to 1 (the input).\n- $x' + a\\,(x - x')$: a point on the straight line from the baseline to the input.\n- $f$: the model output being explained. Interpretation: the score of the explained class, written $f_c$ on slide 3; slide 5 drops the class index.\n- $\\partial f(\\cdot) / \\partial x_i$: the gradient of the output with respect to feature $i$, evaluated at the point on the path.\n- $\\int_0^1 \\dots \\, da$: the accumulation of that gradient along the path.\n\n### Meaning\nFor each feature, IG takes the gradient averaged along the path from the baseline to the input (an integral over an interval of length 1 is an average) and multiplies it by how far the feature is from its baseline value. Interpretation: a feature that equals its baseline value gets zero attribution, whatever the model does with it.\n\n### Why this form\nThe slide motivates the form through its property: completeness, $\\sum_i \\mathrm{IG}_i(x) = f(x) - f(x')$. Interpretation: the factor $(x_i - x'_i)$ times the path-averaged gradient is exactly what makes this sum come out right (a path version of the fundamental theorem of calculus), and averaging over the path avoids relying on the single, possibly saturated, gradient at $x$.",
+   "questions": [
+    "Explain every symbol in the Integrated Gradients formula.",
+    "Why is the integrated gradient multiplied by (x_i − x'_i)?",
+    "What attribution does a feature receive if it has the same value in the input and in the baseline?"
+   ],
+   "figures": [
+    "saliency-l1/slide-5"
+   ],
+   "pages": [
+    5
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.completeness",
+     "rel": "supports",
+     "note": "Interpretation: the path integral scaled by (x_i − x'_i) is what makes the attributions sum to f(x) − f(x'); the slides state completeness but do not derive it."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.completeness",
+   "type": "formula",
+   "title": "Completeness of Integrated Gradients",
+   "short": "Integrated Gradients attributions add up exactly to the difference between the model's output at the input and at the baseline.",
+   "body": "### Formula\n$$\\sum_i \\mathrm{IG}_i(x) = f(x) - f(x')$$\n\n### Symbols\n- $\\mathrm{IG}_i(x)$: the Integrated Gradients attribution of input feature $i$.\n- $\\sum_i$: the sum over all input features.\n- $f(x)$: the model output at the input image $x$.\n- $f(x')$: the model output at the baseline image $x'$.\n\n### Meaning\nThe attributions together account for exactly the change of the output between the baseline and the input. Interpretation: nothing of that change is left unexplained, and no extra credit is created.\n\n### What it guarantees, and what it does not\nThis is exam question Q2 on slide 10; the slides pose it without an answer. Interpretation, based only on the formula and slide 5:\n- **Guaranteed:** the attributions are on the scale of the output, and their sum is exact.\n- **Not guaranteed:** that the split across individual features is right. Many different maps have the same sum.\n- **Relative to the baseline:** the sum is a difference to $f(x')$; change the baseline and both the sum and the map change (slide 5: the choice of baseline changes the map).\n- **Not faithfulness or plausibility:** completeness does not show that the map would pass the deletion or randomization checks, and it says nothing about agreement with people.\n\nInterpretation: plain gradient maps (slide 3) have no such property; their values need not add up to any change of the output.",
+   "questions": [
+    "What does completeness guarantee, and what does it not guarantee?",
+    "Why does completeness depend on the choice of baseline?",
+    "Can two different attribution maps both satisfy completeness? What does that imply?"
+   ],
+   "figures": [
+    "saliency-l1/slide-5",
+    "saliency-l1/slide-10"
+   ],
+   "pages": [
+    5,
+    10
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.integrated-gradients",
+     "rel": "part_of",
+     "note": "Completeness is the property that slide 5 states for Integrated Gradients."
+    },
+    {
+     "to": "saliency-l1.faithfulness",
+     "rel": "contrasts",
+     "note": "Interpretation: completeness fixes only the sum of the attributions; it does not show that individual attributions match the model's behavior, which is what the deletion and randomization checks probe."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.baseline-choice",
+   "type": "limitation",
+   "title": "Baseline choice changes the IG map",
+   "short": "Integrated Gradients depends on the baseline image: a black, blurred or noise baseline gives a different map.",
+   "body": "### The limitation\nSlide 5 lists three possible baselines $x'$ for Integrated Gradients (black, blurred or noise) and states that the choice of baseline changes the map. Slide 9 lists a related pitfall for evaluation: baselines and normalization change the rankings of methods (see the separate note).\n\n### Why it happens\nInterpretation: the baseline enters the IG formula twice, through the factor $(x_i - x'_i)$ and through the path along which gradients are integrated. A feature that equals its baseline value gets zero attribution, so with a black baseline, black pixels in the input can never receive credit, even if the model uses them. Completeness only fixes the sum to $f(x) - f(x')$, which itself moves with $x'$.\n\n### What it affects\n- Interpretation: the IG map of an image is not unique; it answers the question \"relative to which reference image?\"\n- Comparisons between IG and other methods can change with the baseline (slide 9).\n\n### What could address it\nThe slides give no rule for choosing the baseline. Interpretation: report which baseline was used, check whether conclusions hold for several baselines, and compare against a simple reference map, as slide 9 advises.",
+   "questions": [
+    "Which baselines does the lecture mention for Integrated Gradients, and why does the choice matter?",
+    "Why can a black baseline never credit black pixels in the input?",
+    "How does the baseline affect what completeness guarantees?"
+   ],
+   "figures": [
+    "saliency-l1/slide-5",
+    "saliency-l1/slide-9"
+   ],
+   "pages": [
+    5,
+    9
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.integrated-gradients",
+     "rel": "limits",
+     "note": "Slide 5: the choice of baseline x' (black, blurred or noise) changes the Integrated Gradients map."
+    },
+    {
+     "to": "saliency-l1.completeness",
+     "rel": "limits",
+     "note": "Completeness holds only relative to the chosen baseline, because the sum f(x) − f(x') itself moves with x'."
+    },
+    {
+     "to": "saliency-l1.evaluation-settings-rankings",
+     "rel": "complements",
+     "note": "Slide 5's point that the baseline changes the map has an evaluation counterpart on slide 9: baselines and normalization change method rankings."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.deletion-metric",
+   "type": "method",
+   "title": "Deletion metric",
+   "short": "Delete image regions in order of saliency and track the class score; a faithful map makes the score drop fast, giving a small area under the curve.",
+   "body": "### Inputs and output\n- **Inputs:** a model, an image, a class, and the saliency map to be evaluated.\n- **Output:** a deletion curve (class score against the fraction of the image removed) and the area under it.\n\n### Steps (slide 6)\n1. Order the regions by saliency, most salient first.\n2. Remove them in that order, step by step.\n3. After each step, record the class score.\n4. Plot the score against the fraction removed and take the area under the curve.\n\n### How to read it\nA faithful map makes the score drop fast, which gives a **small area under the curve**. The sketch on the slide shows the curve of a faithful map falling steeply and then flattening, below a dashed straight line labeled \"random order\" that falls evenly to the same end point.\n\n![Deletion curve of a faithful map against random order](fig:saliency-l1/slide-6)\n\nThe sketch has no numbers on its axes; it is schematic.\n\n### Caveat stated on the slide\nRemoved pixels create images the model never saw during training. Slide 9 adds that the drop may then come from this artifact (see the out-of-distribution note).\n\n### Why it is built this way\nInterpretation: if the map ranks regions by how much the model depends on them, removing the top-ranked ones first should hurt the score most, so the speed of the drop measures how well the map's ranking matches the model. The slides do not specify how regions are removed (for example replaced by black, grey, blur or noise), how large a region is, or whether the score is a probability or a logit.",
+   "questions": [
+    "Describe the deletion metric step by step.",
+    "Why does a faithful map give a small area under the deletion curve?",
+    "What role does the random-order curve play on the deletion slide?",
+    "Which details of the deletion procedure do the slides leave open, and why do they matter?"
+   ],
+   "figures": [
+    "saliency-l1/slide-6"
+   ],
+   "pages": [
+    6
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.faithfulness",
+     "rel": "measures",
+     "note": "A fast score drop (small area under the curve) is the lecture's operational sign that the map's ranking of regions is faithful to the model."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.deletion-ood",
+   "type": "limitation",
+   "title": "Deletion creates out-of-distribution inputs",
+   "short": "Removing pixels produces images unlike the training data, so a score drop may come from the removal artifact rather than from lost evidence.",
+   "body": "### The limitation\nSlide 6 notes that removed pixels create images the model never saw during training. Slide 9 states the consequence: removal creates **out-of-distribution inputs**, and the drop may come from the artifact. Exam question Q3 on slide 10 asks why a deletion score might reward a map for the wrong reason; the slides give no written answer.\n\n### Why it matters\nThe deletion metric treats a fast score drop as evidence that the deleted regions mattered to the model. Interpretation: a drop has two possible causes:\n1. the deleted region carried evidence the model used, which is what the metric is meant to measure, or\n2. the deletion pattern itself, for example sharp black patches, looks unusual to the model and lowers the score regardless of content.\n\nInterpretation: the metric cannot tell these apart. A map could score well because the regions it ranks first produce more disturbing deletion patterns, not because it is faithful. This is one answer to Q3.\n\n### What it affects\n- Comparisons of saliency methods with the deletion metric.\n- Interpretation: the per-patch score drops in the worked example on slide 8 come from deletions too and carry the same caveat.\n- Interpretation: how pixels are removed is itself a kind of baseline choice, which ties this pitfall to slide 9's warning that baselines change rankings.\n\n### What could address it\nThe slides advise always comparing against a simple reference map (slide 9), such as the random-order curve on slide 6. Interpretation: a reference map suffers the same artifact, so the gap between the two curves is more informative than either curve alone. The slides mention no other remedy.",
+   "questions": [
+    "Why might a deletion score reward a saliency map for the wrong reason?",
+    "What are the two possible causes of a score drop when regions are deleted?",
+    "How does comparing with a reference map reduce this problem, and does it remove it completely?"
+   ],
+   "figures": [
+    "saliency-l1/slide-6",
+    "saliency-l1/slide-9",
+    "saliency-l1/slide-10"
+   ],
+   "pages": [
+    6,
+    9,
+    10
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.deletion-metric",
+     "rel": "limits",
+     "note": "A score drop may come from the unfamiliar removal pattern rather than lost evidence, so a small area under the curve can reward a map for the wrong reason (Q3)."
+    },
+    {
+     "to": "saliency-l1.reference-map",
+     "rel": "motivates",
+     "note": "Interpretation: a reference map is exposed to the same removal artifact, so comparing against it separates the map's contribution from the artifact."
+    },
+    {
+     "to": "saliency-l1.rank-correlation-example",
+     "rel": "limits",
+     "note": "The worked example also measures score drops by deleting patches, so its values e carry the same out-of-distribution caveat."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.model-randomization-check",
+   "type": "method",
+   "title": "Sanity check: randomize the model",
+   "short": "Re-initialize the model's weights layer by layer and recompute the map; a map that barely changes does not depend on what the model learned.",
+   "body": "### Inputs and output\n- **Inputs:** a trained model, an input image, and a saliency method.\n- **Output:** a series of maps, one after each randomization step, to compare with the map of the trained model.\n\n### Steps (slide 7)\n1. Compute the map with the trained model.\n2. Re-initialize the weights of one layer and recompute the map.\n3. Continue layer by layer, recomputing the map each time.\n4. Compare the maps with the original one.\n\n### How to read it\nIf the map **barely changes**, it does not depend on what the model learned. The slide adds that some popular methods look almost the same after randomization.\n\n### What it tests\nInterpretation: a saliency map is meant to explain this particular trained model, so destroying the learned weights should destroy the explanation. A method that still produces a similar map is showing something else, for example structure of the input image, and can look plausible without being faithful.\n\n### What the slides leave open\nThe slides do not say in which order the layers are randomized (from the output or from the input), which similarity measure decides that a map \"barely changes\", or how much change is enough. Interpretation: a rank correlation such as Spearman's $\\rho$ (slide 8) would be one way to quantify the similarity of two maps, but slide 8 uses it for a different comparison.",
+   "questions": [
+    "Describe the model-randomization sanity check.",
+    "What does it mean if a saliency map barely changes after the weights are re-initialized?",
+    "Which details of the randomization check do the slides leave unspecified?"
+   ],
+   "figures": [
+    "saliency-l1/slide-7"
+   ],
+   "pages": [
+    7
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.faithfulness",
+     "rel": "tests",
+     "note": "If the map barely changes after the weights are re-initialized, it does not depend on what the model learned and so cannot be faithful to it."
+    },
+    {
+     "to": "saliency-l1.deletion-metric",
+     "rel": "contrasts",
+     "note": "Deletion perturbs the input and watches the class score; randomization perturbs the model and watches the map."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.randomization-finding",
+   "type": "result",
+   "title": "Some popular methods ignore the weights",
+   "short": "The lecture reports that some popular saliency methods look almost the same after the model's weights are randomized.",
+   "body": "### The finding\nSlide 7 states that some popular methods look almost the same after randomization. The slides do not name the methods, the models or the datasets, and give no numbers or example images.\n\n| Reported on the slides | Not reported on the slides |\n|---|---|\n| Some popular methods barely change after re-initialization | Which methods; which models and data; how many layers; any similarity score |\n\n### Setting\nThe sanity check of slide 7: the weights are re-initialized layer by layer and the map is recomputed after each step.\n\n### Which claim it supports\n- It supports the warning on slides 2 and 9 that a map can look plausible and still not reflect the model: if a map survives the loss of everything the model learned, its appearance cannot come from the learned function.\n- Interpretation: it also shows why the lecture teaches checks and not only methods: a method being popular is no evidence that its maps are faithful.\n\nInterpretation: the slides do not say whether any of the three methods taught in this lecture is among the methods that fail. That should not be inferred from these slides.",
+   "questions": [
+    "What does the lecture report about popular saliency methods under model randomization?",
+    "Which claim of the lecture does this finding support, and why?",
+    "What information would you need, beyond the slide, to judge which methods fail this check?"
+   ],
+   "figures": [
+    "saliency-l1/slide-7"
+   ],
+   "pages": [
+    7
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.plausible-not-faithful",
+     "rel": "supports",
+     "note": "Maps that look the same with random weights still look plausible but cannot reflect the learned model."
+    },
+    {
+     "to": "saliency-l1.model-randomization-check",
+     "rel": "uses",
+     "note": "The finding comes from the layer-by-layer re-initialization check on slide 7."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.spearman-rho",
+   "type": "formula",
+   "title": "Spearman rank correlation",
+   "short": "Spearman's ρ compares two rankings of the same items through their squared rank differences: ρ = 1 − 6Σd² / (n(n² − 1)).",
+   "body": "### Formula\n$$\\rho = 1 - \\frac{6 \\sum d^2}{n\\,(n^2 - 1)}$$\n\n### Symbols\n- $\\rho$: Spearman's rank correlation between two rankings of the same items.\n- $n$: the number of ranked items; $n = 4$ patches in the slide 8 example.\n- $d$: for each item, the difference between its rank in the first ranking and its rank in the second. Interpretation: the slide does not define $d$ explicitly; this reading reproduces its numbers.\n- $\\sum d^2$: the sum of the squared rank differences over all items.\n- $6$ and $n(n^2 - 1)$: constants of the formula that scale $\\rho$ into its range.\n\n### Meaning\n$\\rho = 1$ when the two rankings are identical ($\\sum d^2 = 0$). Interpretation: $\\rho$ falls as items swap places and reaches $-1$ when one ranking is the reverse of the other. Because it uses only ranks, it ignores the size of the saliency values and score drops.\n\n### Why this form (in the lecture)\nSlide 8 uses $\\rho$ to compare the ranking of patches by saliency mass with their ranking by the score drop when each patch is deleted alone. Interpretation: a rank measure fits because the two quantities are on different scales, and because the deletion metric of slide 6 also depends only on the order of regions. Interpretation: this closed form is exact only when there are no tied ranks; the slides do not discuss ties.",
+   "questions": [
+    "Explain every symbol in Spearman's rank correlation formula.",
+    "Why is a rank correlation, rather than a correlation of raw values, a sensible way to compare saliency mass with score drops?",
+    "What values can ρ take, and what does ρ = 1 mean?"
+   ],
+   "figures": [
+    "saliency-l1/slide-8"
+   ],
+   "pages": [
+    8
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.faithfulness",
+     "rel": "measures",
+     "note": "In the worked example ρ quantifies how well a map's ranking of patches agrees with the score drop each patch causes. Interpretation: this is a ranking-level faithfulness score, although the slide does not call it that."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.rank-correlation-example",
+   "type": "example",
+   "title": "Worked example: ranking four patches",
+   "short": "Four patches ranked by saliency mass and by single-patch deletion drop disagree in one swap, giving Spearman ρ = 0.8.",
+   "body": "### Setup (slide 8)\n- 4 patches with saliency mass $a = (0.50, 0.30, 0.15, 0.05)$.\n- Score drop when each patch is deleted alone: $e = (0.40, 0.05, 0.20, 0.01)$.\n\n### Steps\n1. Rank $a$ from largest to smallest: $(1, 2, 3, 4)$.\n2. Rank $e$ from largest to smallest: $(1, 3, 2, 4)$.\n3. Sum of squared rank differences: $\\sum d^2 = 2$. Interpretation: the slide gives only the sum; the individual differences $d = (0, -1, 1, 0)$ follow from the two rankings.\n4. With $n = 4$: $n(n^2 - 1) = 60$.\n5. $\\rho = 1 - 6 \\cdot 2 / 60 = 0.8$.\n\n| Patch | $a$ | rank of $a$ | $e$ | rank of $e$ | $d$ |\n|---|---|---|---|---|---|\n| 1 | 0.50 | 1 | 0.40 | 1 | 0 |\n| 2 | 0.30 | 2 | 0.05 | 3 | $-1$ |\n| 3 | 0.15 | 3 | 0.20 | 2 | 1 |\n| 4 | 0.05 | 4 | 0.01 | 4 | 0 |\n\n### Outcome\n$\\rho = 0.8$.\n\n### Lesson\nInterpretation: the slide draws no verbal conclusion. In the context of the lecture, the example shows a patch-by-patch way to test a map: compare where the map puts its mass with what deleting each patch actually does to the model. The value 0.8 means good but imperfect agreement. The disagreement sits in patches 2 and 3: patch 2 receives 0.30 of the saliency mass but its deletion drops the score by only 0.05, while patch 3 has less mass (0.15) but a larger drop (0.20).\n\nInterpretation: two caveats from the rest of the lecture apply. The drops $e$ come from deletions and so from out-of-distribution inputs (slide 9). Deleting each patch alone also ignores interactions between patches, unlike the cumulative deletion curve of slide 6.",
+   "questions": [
+    "Compute Spearman's ρ for the slide 8 example and explain each step.",
+    "Which patch is over-rated by the saliency map relative to its deletion effect, and how can you tell?",
+    "What does deleting each patch alone miss compared with the deletion curve?"
+   ],
+   "figures": [
+    "saliency-l1/slide-8"
+   ],
+   "pages": [
+    8
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.spearman-rho",
+     "rel": "uses",
+     "note": "The example plugs Σd² = 2 and n = 4 into the formula to obtain ρ = 0.8."
+    },
+    {
+     "to": "saliency-l1.deletion-metric",
+     "rel": "complements",
+     "note": "Both test a map by deleting regions; the example deletes each patch alone and compares rankings, while the deletion curve removes regions cumulatively and uses the area under the curve."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.reference-map",
+   "type": "design",
+   "title": "Compare against a simple reference map",
+   "short": "The lecture's rule is to always compare a map's evaluation against a simple reference map, such as a random ordering of regions.",
+   "body": "### What was chosen\nSlide 9 gives the rule: always compare against a simple reference map. Slide 6 shows one such reference: the deletion curve for a **random order** of regions, drawn as a dashed line next to the curve of a faithful map.\n\n### What it rules out\nInterpretation: a raw evaluation score means little on its own. If the removal artifact alone lowers the score (slide 9), a deletion curve can fall quickly for any map, including a random one. Comparing with a reference under the same settings separates what the map contributes from what the evaluation procedure produces by itself.\n\n### Reason\nThe slides state the rule without giving a separate reason. Interpretation: it follows from the other pitfalls on the same slide. Out-of-distribution removals and the choice of baselines and normalization both shift absolute scores and even method rankings, so only a comparison made under identical settings stays informative.\n\n### What the slides leave open\nThe slides name no reference map other than the random order on slide 6, and do not say how large the gap to the reference must be for a map to count as faithful.",
+   "questions": [
+    "Why does the lecture advise always comparing against a simple reference map?",
+    "Which reference appears on the deletion slide, and how should the two curves be compared?",
+    "Which pitfalls does a reference map help with, and which does it not remove?"
+   ],
+   "figures": [
+    "saliency-l1/slide-6",
+    "saliency-l1/slide-9"
+   ],
+   "pages": [
+    6,
+    9
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.deletion-metric",
+     "rel": "complements",
+     "note": "The random-order curve on slide 6 is the reference against which a map's deletion curve is read."
+    }
+   ]
+  },
+  {
+   "id": "saliency-l1.evaluation-settings-rankings",
+   "type": "limitation",
+   "title": "Baselines and normalization change method rankings",
+   "short": "Which saliency method looks best can change with the baseline and the normalization used in the evaluation.",
+   "body": "### The limitation\nSlide 9 states that baselines and normalization change the rankings of methods. The slides give no numbers or example of how much rankings change.\n\n### What it affects\nInterpretation: any comparison of saliency methods, for example gradient saliency, Grad-CAM and Integrated Gradients under the deletion metric, depends on settings that are not part of the methods themselves. The slide names two:\n- **Baselines.** Elsewhere the slides use the word for the reference image of Integrated Gradients (slide 5). Interpretation: the slide 9 bullet may also cover the values used to fill removed pixels in the deletion metric; the slide does not say which is meant.\n- **Normalization.** The slides do not say what is normalized. Interpretation: likely the scaling of saliency values (for example absolute values or rescaling to a common range) or of the class score before curves are compared.\n\n### Why it matters\nInterpretation: a claim that method A is more faithful than method B holds only for the settings used. This is the evaluation-level counterpart of slide 5's point that the baseline changes the map itself.\n\n### What could address it\nThe same slide advises always comparing against a simple reference map. Interpretation: also report the baseline and the normalization, and check whether a ranking holds across several choices.",
+   "questions": [
+    "Why can the ranking of saliency methods change with the baseline and the normalization?",
+    "Which two meanings of 'baseline' are relevant in this lecture?",
+    "What should a fair comparison of saliency methods report, given this pitfall?"
+   ],
+   "figures": [
+    "saliency-l1/slide-9"
+   ],
+   "pages": [
+    9
+   ],
+   "links": [
+    {
+     "to": "saliency-l1.deletion-metric",
+     "rel": "limits",
+     "note": "Comparisons of methods under the deletion metric hold only for the baseline and normalization that were used."
+    },
+    {
+     "to": "saliency-l1.reference-map",
+     "rel": "motivates",
+     "note": "Interpretation: because settings shift absolute scores and rankings, a simple reference map evaluated under the same settings gives a fixed point of comparison."
+    }
+   ]
+  }
+ ]
+}

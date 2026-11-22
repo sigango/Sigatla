@@ -1,0 +1,577 @@
+{
+ "source": {
+  "title": "Lecture 2 · Evaluating explanations",
+  "authors": "",
+  "year": "",
+  "summary": "### Overview\nThe lecture asks how to tell whether a saliency map (the slides simply say \"map\") is faithful to the model rather than merely plausible to a person. It first separates plausibility from faithfulness and warns that a model using a shortcut can still get a plausible-looking map (slide 2). It then introduces removal-based metrics: the deletion and insertion curves with their area under the curve, which depend only on the order of the regions (slide 3), and a single-deletion rank correlation between saliency mass and the effect of removing each region (slide 5). Slide 4 explains the out-of-distribution problem of removal and names three remedies. The second half asks how to know whether a metric is right: compare every method with a reference map built without the model (slide 6), and test metrics on planted evidence that the model is first shown to use (slide 7). A worked example (slide 8) shows a method whose deletion AUC (0.31) is worse than that of a centred Gaussian (0.28). Slide 9 states two take-aways and three exam questions.\n\n### Learning goals\nInterpretation: the slides do not list learning goals; the goals below are inferred from the summary slide and its exam questions.\n- Distinguish a plausible map from a faithful one and explain why faithfulness needs evidence from the model.\n- Describe the deletion and insertion curves, how their area under the curve is read, and why both depend only on the order of the regions.\n- Explain the out-of-distribution problem of removal metrics and the three remedies the lecture names.\n- Define the single-deletion rank correlation, explain each symbol and state its limitation.\n- Use model-free reference maps and planted evidence to judge whether a metric, and a method's score on it, says anything about the model.",
+  "questions": [
+   "Why do the insertion and deletion metrics depend only on the order of the regions, and what follows for two maps that rank the regions identically but have different values?",
+   "Removed regions are black, grey or blurred. Explain why this can make a deletion score misleading, and how fine-tuning with random removal could change the score.",
+   "Why must a model be shown to use a planted cue before the cue counts as ground truth for evaluating a metric?",
+   "A method has deletion AUC 0.31 and a centred Gaussian reference has 0.28. What do you conclude about the method, and what should you check next?"
+  ]
+ },
+ "nodes": [
+  {
+   "id": "evaluation-l2.plausibility",
+   "type": "concept",
+   "title": "Plausibility of a saliency map",
+   "short": "A map is plausible when it agrees with what a person expects to matter for the decision.",
+   "body": "### What it is\nThe lecture calls a map **plausible** when it agrees with what a person expects to matter (slide 2). Plausibility is therefore judged against a human observer's expectations, not against the model.\n\n### Intuition\nInterpretation: a map that highlights the object a person would name, for example the animal in an animal photo, looks plausible whether or not the model's prediction actually depended on that region.\n\n### Why it matters in this lecture\n- Slide 2 sets plausibility against **faithfulness** (what the model actually uses) to show that the two are different properties.\n- The same slide warns that a model relying on a shortcut can still get a plausible-looking map, so plausibility cannot certify faithfulness.\n- Interpretation: this is why the rest of the lecture evaluates maps with model-based tests (removal curves, controls, planted evidence) instead of asking people whether maps look right.",
+   "questions": [
+    "How does the lecture define a plausible map, and against what is plausibility judged?",
+    "Can a map be plausible but not faithful? Give the lecture's reason.",
+    "Why does the lecture not accept human judgement as evidence of faithfulness?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-2"
+   ],
+   "pages": [
+    2
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.faithfulness",
+     "rel": "contrasts",
+     "note": "Plausibility is judged against what a person expects to matter, faithfulness against what the model actually uses; slide 2 defines the two side by side to show they can diverge."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.faithfulness",
+   "type": "concept",
+   "title": "Faithfulness: what the model actually uses",
+   "short": "A map is faithful when it reflects what the model actually uses, and this can only be established with evidence from the model.",
+   "body": "### What it is\nA map is **faithful** when it reflects what the model actually uses (slide 2). The lecture adds that faithfulness needs evidence **from the model**, not from human judgement, and repeats this as the first take-away on the summary slide (slide 9).\n\n### Intuition\nInterpretation: faithfulness is a claim about cause and effect inside the model. If the map says a region matters, changing that region should change the model's output; regions the map calls unimportant should not.\n\n### How the lecture gathers model evidence\n- **Deletion and insertion curves** track the class score as the top-ranked regions are removed or added (slide 3).\n- **Single-deletion rank correlation** compares each region's saliency mass with the effect of removing that region alone (slide 5).\n- **Checks on the metrics themselves**: model-free reference maps (slide 6) and planted evidence with a cue the model is shown to use (slide 7).\n\n### Caveat stated with it\nThe summary slide pairs the faithfulness take-away with a warning: removal metrics assume in-distribution inputs (slide 9), an assumption that removal itself can break (slide 4).",
+   "questions": [
+    "Define faithfulness as the lecture does, and explain why it cannot be judged by people looking at the map.",
+    "Which kinds of model evidence does the lecture use to assess faithfulness?",
+    "Which assumption behind removal metrics does the summary slide state next to the faithfulness take-away?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-2",
+    "evaluation-l2/slide-9"
+   ],
+   "pages": [
+    2,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.metric-ground-truth",
+     "rel": "motivates",
+     "note": "If faithfulness must be shown with model evidence, the metrics that supply this evidence must themselves be checked in cases with a known answer."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.shortcut-plausible-map",
+   "type": "limitation",
+   "title": "Shortcut models can get plausible-looking maps",
+   "short": "A model that relies on a shortcut can still receive a plausible-looking map, so a map that looks right does not show the model is right for the right reason.",
+   "body": "### The pitfall\nSlide 2 warns that a model that uses a **shortcut** can get a plausible-looking map. A person inspecting the map would accept it, even though the model's decision rests on something else.\n\n### What it affects\n- Any evaluation of explanations by human judgement: a plausible map is not evidence of faithfulness.\n- Interpretation: it also affects using maps to audit models. If the map looks plausible while the model uses a shortcut, the map hides exactly the behavior an audit is meant to find.\n\n### What addresses it\n- The lecture's answer is to require evidence from the model rather than human judgement (slide 2).\n- Interpretation: planted evidence (slide 7) turns the problem into a controlled test. It gives the model a known cue on purpose (for example a small marker) and checks whether a metric rewards the map that marks it.\n\n### What the slides do not say\nThe slides give no concrete example of a shortcut and do not define the term further. The planted marker on slide 7 is presented as a controlled cue, not explicitly as a shortcut.",
+   "questions": [
+    "Why can a model that uses a shortcut still produce a plausible-looking map, and what does this imply for human evaluation of maps?",
+    "How could planted evidence be used to study the shortcut problem in a controlled way?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-2"
+   ],
+   "pages": [
+    2
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.plausibility",
+     "rel": "limits",
+     "note": "Because a shortcut model can receive a plausible-looking map, plausibility cannot be taken as evidence that the map is faithful."
+    },
+    {
+     "to": "evaluation-l2.faithfulness",
+     "rel": "motivates",
+     "note": "The shortcut pitfall is the reason given on slide 2 for demanding evidence from the model rather than from human judgement."
+    },
+    {
+     "to": "evaluation-l2.planted-evidence",
+     "rel": "complements",
+     "note": "Interpretation: planted evidence installs a known cue on purpose, turning the shortcut problem into a test where the right answer is known."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.removal-metrics",
+   "type": "concept",
+   "title": "Removal-based faithfulness metrics",
+   "short": "Removal metrics judge a map by altering the regions it ranks highest and measuring how the model's class score responds.",
+   "body": "### What it is\nThe summary slide groups the lecture's metrics as **removal metrics** (slide 9). Each alters image regions according to the map and records the model's class score.\n\n| Metric | What is changed | What is reported |\n|---|---|---|\n| Deletion (slide 3) | top-k regions removed, k = 1..P | area under the score curve, lower is better |\n| Insertion (slide 3) | top-k regions added to a blurred image | area under the score curve, higher is better |\n| Single-deletion rank correlation (slide 5) | each region p removed alone | Spearman correlation between saliency mass and score drop |\n\n### Why it matters\nRemoval supplies evidence from the model itself, which slide 2 demands for faithfulness. Interpretation: if the map is right about which regions the model uses, altering those regions should change the score most.\n\n### Shared assumption and weakness\nThe summary slide states that removal metrics **assume in-distribution inputs**. Slide 4 explains why this can fail: removed regions are black, grey or blurred, so the model sees images it never saw in training, and the score may drop because of the artifact rather than because evidence is gone.\n\nInterpretation: insertion belongs here as well because it starts from a blurred image, so it shares the out-of-distribution concern even though it adds regions rather than removing them.",
+   "questions": [
+    "Which metrics in the lecture are removal metrics, and what does each report?",
+    "Which assumption do all removal metrics share according to the summary slide?",
+    "Why does insertion share the out-of-distribution concern even though it adds regions?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-3",
+    "evaluation-l2/slide-5",
+    "evaluation-l2/slide-9"
+   ],
+   "pages": [
+    3,
+    4,
+    5,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.faithfulness",
+     "rel": "measures",
+     "note": "Faithfulness needs evidence from the model, so the lecture measures it by altering the regions a map ranks highest and watching the model's class score."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.deletion-curve",
+   "type": "method",
+   "title": "Deletion curve and its AUC",
+   "short": "Deletion removes the map's top-k regions for k = 1..P, records the class score each time, and reports the area under the curve, where lower is better.",
+   "body": "### Inputs\n- An image, the model's class score for it, and a map whose regions are ranked from most to least salient.\n- P regions. Interpretation: the slide writes k = 1..P without defining P; it is presumably the number of regions.\n\n### Steps\n1. For k = 1, ..., P, remove the top-k regions of the map from the image.\n2. Record the class score of the modified image.\n3. Report the **area under the curve (AUC)** of score against the fraction of the image removed.\n\n### Output and reading\n**Lower is better** (slide 3). The slide's sketch shows the curve of a faithful map dropping steeply and then flattening, below a straight dashed line labeled \"random order\".\n\n![Deletion curve of a faithful map against random order](fig:evaluation-l2/slide-3)\n\nInterpretation: a faithful map lists first the regions the model relies on, so the score collapses after few removals and the area stays small.\n\n### Interpretation: a formula\nThe slide gives no equation. Writing $x^{(k)}$ for the image with its top-k regions removed and $f$ for the class score, the curve is the points $(k/P,\\ f(x^{(k)}))$, and a simple discrete area is\n$$\\mathrm{AUC}_{\\mathrm{del}} \\approx \\frac{1}{P}\\sum_{k=1}^{P} f\\big(x^{(k)}\\big).$$\nThis formalization is not on the slide, and normalization conventions vary.\n\n### Why it is built this way\nInterpretation: it turns the map's ranking into a testable prediction about the model: removing what the map calls important should hurt the score faster than removing regions in random order. The slide notes that the result depends only on the order of the regions, and slide 4 warns that the removed regions create out-of-distribution artifacts.",
+   "questions": [
+    "Describe the deletion procedure step by step and say whether a high or a low AUC is better, and why.",
+    "What does the 'random order' line in the slide's sketch represent, and how should a faithful map's curve compare with it?",
+    "Why can a low deletion AUC be misleading when removed regions are filled with black or grey?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-3"
+   ],
+   "pages": [
+    3
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "part_of",
+     "note": "Deletion is one of the removal metrics grouped on the summary slide."
+    },
+    {
+     "to": "evaluation-l2.faithfulness",
+     "rel": "measures",
+     "note": "A low deletion AUC indicates that the map ranks first the regions whose removal destroys the class score."
+    },
+    {
+     "to": "evaluation-l2.insertion-curve",
+     "rel": "contrasts",
+     "note": "Deletion starts from the full image and removes regions (lower AUC is better); insertion starts from a blurred image and adds them (higher AUC is better)."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.insertion-curve",
+   "type": "method",
+   "title": "Insertion curve and its AUC",
+   "short": "Insertion adds the map's top-k regions to a blurred image and reports the area under the score curve, where higher is better.",
+   "body": "### Inputs\nAn image, a blurred version of it, the model's class score, and a map with ranked regions.\n\n### Steps\n1. Start from a **blurred image**.\n2. Add the top-k regions of the map, for increasing k.\n3. Record the class score each time and report the **area under the curve**.\n\n### Output and reading\n**Higher is better** (slide 3). Interpretation: if the map ranks first the regions the model relies on, restoring them should bring the class score back quickly, so the curve rises early and the area is large.\n\n### Why it is built this way\nInterpretation: insertion mirrors deletion. Deletion asks whether removing the top regions destroys the prediction; insertion asks whether the top regions alone are enough to rebuild it. Reporting both guards against a map that does well from one direction only. The slides do not state this motivation.\n\n### What the slides say and leave open\n- Like deletion, insertion depends only on the order of the regions, not on the map's values (slide 3).\n- The slide does not say how strong the blur is, how regions are defined, or whether k runs to P as for deletion. Unlike deletion, it has no sketch of an insertion curve.\n- Interpretation: the blurred starting image is itself an input the model never saw in training, so the out-of-distribution problem of slide 4 applies to insertion too.",
+   "questions": [
+    "How does insertion differ from deletion in its starting image, its direction and the reading of its AUC?",
+    "Why might one report insertion as well as deletion?",
+    "Which parts of the insertion procedure does the slide leave unspecified?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-3"
+   ],
+   "pages": [
+    3
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "part_of",
+     "note": "Insertion is grouped with the removal metrics; it starts from a blurred, i.e. removed, version of the image."
+    },
+    {
+     "to": "evaluation-l2.faithfulness",
+     "rel": "measures",
+     "note": "A high insertion AUC indicates that the regions ranked first are enough to restore the model's class score."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.order-only-property",
+   "type": "concept",
+   "title": "Insertion and deletion use only region order",
+   "short": "Insertion and deletion scores depend only on the order in which a map ranks the regions, not on the map's values.",
+   "body": "### What it is\nSlide 3 states that insertion and deletion both depend only on the **order of the regions**, not on the map's values. Exam question 1 on slide 9 asks why.\n\n### Why it holds\nInterpretation: in both procedures the map is used for one thing only, to decide which regions are removed or added at step k. The class score is then computed by the model on the modified image. The map's numbers never enter the score, so two maps that rank the regions the same way produce the same curve and the same AUC.\n\n### Consequences\nInterpretation, not stated on the slides:\n- Rescaling a map, or any other transformation that keeps the ranking, leaves both scores unchanged.\n- The metrics cannot reward a map for getting the **size** of differences right, for example for showing that one region matters far more than the next. They test the ranking only.\n- Ties in the map must be broken somehow, and the tie-breaking rule then affects the score.\n\n### Relation to the rest of the lecture\nInterpretation: the single-deletion rank correlation (slide 5) is also rank-based, through the Spearman correlation, so it too ignores the exact values of $a_p$. It differs in comparing the ranking with the effect of removing each region alone rather than cumulatively.",
+   "questions": [
+    "Why do insertion and deletion depend only on the order of the regions and not on the map's values?",
+    "Two maps rank the regions identically, but one has much sharper contrast. How do their deletion AUCs compare?",
+    "Which property of a map can insertion and deletion therefore not evaluate?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-3",
+    "evaluation-l2/slide-9"
+   ],
+   "pages": [
+    3,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.deletion-curve",
+     "rel": "limits",
+     "note": "Because only the ranking enters, deletion cannot reward a map for getting the relative sizes of importance right."
+    },
+    {
+     "to": "evaluation-l2.insertion-curve",
+     "rel": "limits",
+     "note": "Insertion uses the map only to choose which regions to add, so the map's values cannot influence the score."
+    },
+    {
+     "to": "evaluation-l2.single-deletion-correlation",
+     "rel": "complements",
+     "note": "Interpretation: the single-deletion score is also rank-based via the Spearman correlation, but it compares rankings with per-region effects instead of building a cumulative curve."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.ood-problem",
+   "type": "limitation",
+   "title": "Out-of-distribution problem of removal",
+   "short": "Removed regions are black, grey or blurred, so the class score may drop because of the artifact rather than because evidence is gone.",
+   "body": "### The problem\nRemoval replaces regions with black, grey or blurred content, which produces images the model **never saw in training** (slide 4). The score may then drop because of this **artifact**, not because evidence is gone. The summary slide restates it as an assumption: removal metrics assume in-distribution inputs (slide 9).\n\n### What it affects\n- **Deletion**: a low AUC could mean that the patches confuse the model rather than that the map found the evidence.\n- **Insertion**: Interpretation: the blurred starting image is also out of distribution, so early scores may be low for the same reason.\n- **Single-deletion rank correlation**: Interpretation: each $e_p$ is a removal effect, so it can contain an artifact component too.\n- **Comparisons with a reference**: after a method fails to beat a centred Gaussian, the worked example names checking for removal artifacts as the next step (slide 8).\n\n### Intuition\nInterpretation: the metric wants to ask what the model would do if this evidence were absent, but it actually asks what the model does when the region is replaced by a grey patch. The two questions coincide only if the model treats the patch as neutral.\n\n### What addresses it\nSlide 4 lists three remedies: retrain on removed images, fill regions with plausible content, or fine-tune with random removal.",
+   "questions": [
+    "Why can a deletion score drop even when no evidence the model uses has been removed?",
+    "Which of the lecture's metrics are affected by the out-of-distribution problem, and how?",
+    "How does the summary slide phrase the assumption that this problem violates?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-4",
+    "evaluation-l2/slide-9"
+   ],
+   "pages": [
+    4,
+    8,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "limits",
+     "note": "Every removal metric assumes the modified image is in distribution; an artifact can lower the score without any evidence being removed."
+    },
+    {
+     "to": "evaluation-l2.deletion-curve",
+     "rel": "limits",
+     "note": "A fast-falling deletion curve may reflect the model's reaction to black or grey patches rather than the removal of evidence."
+    },
+    {
+     "to": "evaluation-l2.insertion-curve",
+     "rel": "limits",
+     "note": "Interpretation: insertion starts from a blurred image the model never saw in training, so its early scores can be depressed by the artifact."
+    },
+    {
+     "to": "evaluation-l2.ood-remedies",
+     "rel": "motivates",
+     "note": "Slide 4 follows the problem with three remedies aimed at making a score drop mean that evidence is gone."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.ood-remedies",
+   "type": "method",
+   "title": "Remedies for removal artifacts",
+   "short": "The lecture names three remedies for out-of-distribution removal: retrain on removed images, fill removed regions with plausible content, or fine-tune with random removal.",
+   "body": "### The three remedies (slide 4)\n1. **Retrain on removed images**, so that removal is no longer unfamiliar to the model.\n2. **Fill regions with plausible content** instead of black, grey or blur, so the modified image stays close to natural images.\n3. **Fine-tune with random removal**: continue training the model on images with randomly removed regions.\n\nThe slide lists the remedies without detail: it does not say how plausible content is produced, how retraining is set up, or how the remedies compare.\n\n### What they are for\nAll three aim to make a score drop after removal mean that evidence is gone, not that an artifact appeared. Interpretation: remedies 1 and 3 change the model so it is used to removed regions; remedy 2 changes the input so the model never meets the artifact.\n\n### Exam question 2: how could fine-tuning with random removal change a deletion score?\nInterpretation (slide 9 poses the question but the slides do not answer it):\n- After fine-tuning, removing regions that carry no evidence should hurt the score less, so curves for weak maps, random orders and model-free references tend to fall more slowly and their deletion AUC rises.\n- A map that marks the real evidence should still cause a fast drop, so the gap between it and the reference becomes a cleaner signal.\n- Caveat: the fine-tuned model is not the original model, so the score describes a slightly different model, which may also have learned to rely on other evidence.\n\n### Interpretation: trade-off\nRetraining and fine-tuning cost compute and alter the model under study; filling leaves the model alone but needs a way to generate content that does not itself add or remove evidence.",
+   "questions": [
+    "Name the three remedies the lecture gives for the out-of-distribution problem.",
+    "How could fine-tuning with random removal change a deletion score, and which new caveat does it introduce?",
+    "Which remedies change the model and which change the input?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-4"
+   ],
+   "pages": [
+    4,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.deletion-curve",
+     "rel": "complements",
+     "note": "Applying a remedy before computing deletion makes a low AUC more attributable to removed evidence than to removal artifacts."
+    },
+    {
+     "to": "evaluation-l2.worked-example-control",
+     "rel": "complements",
+     "note": "Interpretation: the worked example's next step, checking for removal artifacts, could be carried out by re-running the comparison after one of these remedies."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.single-deletion-correlation",
+   "type": "formula",
+   "title": "Single-deletion rank correlation F",
+   "short": "F is the Spearman correlation, across regions, between each region's saliency mass and the score drop caused by removing that region alone.",
+   "body": "### Formula\n$$e_p = f(x) - f(x \\text{ without region } p)$$\n$$F = \\rho_S\\big((a_p),\\ (e_p)\\big)$$\n\n### Symbols\n- $x$: the input image.\n- $f(x)$: the model's score for the image. Interpretation: the class score, as in the insertion and deletion curves; slide 5 does not define $f$.\n- $p$: a region; the correlation runs over all regions.\n- $x \\text{ without region } p$: the image with region $p$ removed, and only that region.\n- $e_p$: the effect of removing region $p$ alone, i.e. the drop in score.\n- $a_p$: the saliency mass in region $p$. Interpretation: the sum of the map's values inside the region.\n- $(a_p)$, $(e_p)$: the lists of these values over all regions.\n- $\\rho_S$: the Spearman (rank) correlation.\n- $F$: the resulting faithfulness score.\n\n### Meaning\nF asks whether the map ranks the regions in the same order as their measured individual effect on the model's score. Interpretation: F near 1 means regions with more saliency mass are those whose removal hurts most; near 0 means no monotone relation; a negative value means the map tends to rank regions backwards.\n\n### Why this form\nThe slide motivates neither choice. Interpretation: a rank correlation does not require $a_p$ and $e_p$ to be on comparable scales or linearly related; removing one region at a time yields a separate measurement per region instead of one cumulative curve.\n\n### Limitation stated on the slide\nIt **ignores interactions between regions**.",
+   "questions": [
+    "Write down the single-deletion rank correlation and explain every symbol.",
+    "What does F close to 1, close to 0 and negative say about a map?",
+    "Why might a rank correlation be preferred to a linear correlation here?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-5"
+   ],
+   "pages": [
+    5
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "part_of",
+     "note": "F is a removal metric: every e_p comes from removing a region and re-scoring the image."
+    },
+    {
+     "to": "evaluation-l2.faithfulness",
+     "rel": "measures",
+     "note": "F measures faithfulness as agreement between the map's ranking of regions and the model's measured response to removing each one."
+    },
+    {
+     "to": "evaluation-l2.deletion-curve",
+     "rel": "contrasts",
+     "note": "Deletion removes regions cumulatively in the map's order and integrates the score; F removes each region alone and compares two rankings."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.ignores-interactions",
+   "type": "limitation",
+   "title": "Single deletion ignores region interactions",
+   "short": "Because each region is removed alone, the single-deletion rank correlation ignores interactions between regions.",
+   "body": "### The limitation\nSlide 5 notes that the single-deletion score **ignores interactions between regions**: each $e_p$ measures removing region $p$ while all other regions stay in place.\n\n### Why it matters\nInterpretation, not on the slide:\n- **Redundant evidence**: if two regions carry the same evidence, removing either one alone may barely change the score. Both get a small $e_p$, although removing both would destroy the prediction, so a map that marks them is judged poorly.\n- **Joint evidence**: if a region matters only in combination with another, its effect alone can understate its role.\n- The score therefore depends on how the evidence is spread over regions, not only on whether the map is right.\n\n### What it affects\nThe validity of F whenever the model combines evidence from several regions.\n\n### What could address it\nThe slides propose no fix. Interpretation: cumulative removal, as in the deletion curve, captures some joint effects because regions are removed together, at the price of depending on the removal order; measuring the effect of removing groups of regions is another option.",
+   "questions": [
+    "What does it mean that the single-deletion score ignores interactions between regions?",
+    "Construct a case with redundant evidence in which a faithful map gets a low single-deletion correlation.",
+    "Does the deletion curve suffer from the same limitation? Explain."
+   ],
+   "figures": [
+    "evaluation-l2/slide-5"
+   ],
+   "pages": [
+    5
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.single-deletion-correlation",
+     "rel": "limits",
+     "note": "Each e_p is measured with all other regions present, so F misses evidence that is redundant across, or shared between, regions."
+    },
+    {
+     "to": "evaluation-l2.deletion-curve",
+     "rel": "contrasts",
+     "note": "Interpretation: deletion removes regions cumulatively and so captures some joint effects that single deletion misses."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.reference-map",
+   "type": "design",
+   "title": "Model-free reference map as control",
+   "short": "A reference map, a centred Gaussian or a uniform box, is built without the model and serves as the control that every method must beat.",
+   "body": "### What was chosen\nSlide 6 introduces a **reference map** built **without the model**: a **centred Gaussian** or a **uniform box**. It is a map that knows nothing about the model and serves as a control.\n\n![Saliency per region, as drawn on the controls slide](fig:evaluation-l2/slide-6)\n\n### What it rules out\nInterpretation: a method can score well for reasons unrelated to the model, for example because objects tend to sit near the image centre, or because the metric reacts to removal itself. A map that cannot know anything about the model shows what score such reasons alone produce, so only the part of a method's score beyond it is evidence about the model.\n\n### The reason the lecture gives\nIf a method does not score above the reference, its score says little about the model (slide 6).\n\n### The slide's figure\nThe slide shows a grid of regions shaded by **saliency per region**, strongest near the middle and fading outwards. The slide does not say whether this grid is the reference map or a method's map.\n\n### Interpretation: a related comparison\nThe \"random order\" line in the deletion sketch on slide 3 is another model-free comparison, though the slides do not call it a control.",
+   "questions": [
+    "What is a reference map in this lecture, and how is it built?",
+    "Why must the reference map be built without the model?",
+    "Why might a centred Gaussian achieve a good score on a removal metric?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-6"
+   ],
+   "pages": [
+    6
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "tests",
+     "note": "Running a removal metric on a model-free map shows how much score the metric gives without any knowledge of the model."
+    },
+    {
+     "to": "evaluation-l2.metric-ground-truth",
+     "rel": "part_of",
+     "note": "The summary slide names controls as one of two ways to give a metric something to be right about."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.beat-the-reference",
+   "type": "design",
+   "title": "Rule: beat and report the reference",
+   "short": "A method's score says little about the model unless it beats the model-free reference, so the reference is reported next to every method.",
+   "body": "### What was chosen\nTwo rules from slide 6:\n1. If a method does not score **above** the reference, its score says little about the model.\n2. Report the reference next to every method.\n\n### What it rules out\n- Reading an absolute metric value as evidence of faithfulness without knowing what a map with no knowledge of the model would get.\n- Interpretation: comparing methods only with each other, which can rank them even when none is better than the control.\n\n### Reading \"above\" correctly\nInterpretation: \"above\" means better on the metric, not numerically larger. Deletion AUC is lower-is-better, so beating the reference there means a **lower** value. The worked example (slide 8) applies the rule with deletion AUC: the method's 0.31 is higher, hence worse, than the centred Gaussian's 0.28.\n\n### The reason\nThe lecture's reason is the rule itself: a score that does not beat a model-free map says little about the model. The summary slide adds that controls give a metric something to be right about (slide 9).\n\n### What the slides leave open\nThey do not say by how much a method must beat the reference, or how to account for variation across images.",
+   "questions": [
+    "State the two rules about the reference map from slide 6.",
+    "For deletion AUC, what does it mean for a method to score 'above' the reference?",
+    "Why is comparing methods only with each other not enough?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-6",
+    "evaluation-l2/slide-8"
+   ],
+   "pages": [
+    6,
+    8
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.reference-map",
+     "rel": "uses",
+     "note": "The rule compares every method's score with the score of the model-free reference map."
+    },
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "frames",
+     "note": "The rule sets how any removal-metric score is read: relative to the reference, not as an absolute value."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.planted-evidence",
+   "type": "design",
+   "title": "Planted evidence for testing metrics",
+   "short": "Train a model with a cue you control, confirm the model uses it, and require a good metric to rank a map that marks the cue above maps that do not.",
+   "body": "### What was chosen (slide 7)\n1. **Plant a cue**: train a model on data that contain a cue you control, for example a small marker.\n2. **Check that the model uses it**: remove or move the cue and watch the model's output change.\n3. **Test the metric**: a good metric must rank a map that marks the cue above maps that do not.\n\n### What it rules out\nInterpretation: on ordinary data nobody knows which regions the model truly uses, so a metric cannot be checked against a right answer. Planting the evidence creates a case where the answer is known by construction and verified in step 2, so a metric that fails to prefer the cue-marking map is shown to be wrong.\n\n### The reason given\nThe summary slide says that controls and planted evidence give a metric \"something to be right about\" (slide 9).\n\n### What the slides leave open\nThey do not specify the data, the marker beyond \"a small marker\", how strongly the model must depend on the cue, or which maps serve as the \"maps that do not\" mark the cue.",
+   "questions": [
+    "Describe the three steps of the planted-evidence protocol.",
+    "What must a good metric do in a planted-evidence test?",
+    "What does planted evidence provide that ordinary evaluation data lack?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-7"
+   ],
+   "pages": [
+    7,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "tests",
+     "note": "Planted evidence checks whether a metric ranks the map that marks the cue above maps that miss it."
+    },
+    {
+     "to": "evaluation-l2.cue-use-check",
+     "rel": "uses",
+     "note": "Step 2 of the protocol is the check that the model actually relies on the planted cue."
+    },
+    {
+     "to": "evaluation-l2.metric-ground-truth",
+     "rel": "part_of",
+     "note": "The summary slide names planted evidence as one of two ways to give a metric something to be right about."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.cue-use-check",
+   "type": "design",
+   "title": "Verify the model uses the planted cue",
+   "short": "Before a planted cue counts as ground truth, removing or moving it must be shown to change the model's output.",
+   "body": "### What was chosen\nSlide 7: **first** check that the model uses the cue, by removing or moving it and watching the output change. Only then is a metric judged against the cue. Exam question 3 (slide 9) asks why this check is needed.\n\n### What it rules out\nInterpretation (slide 9 poses the question but the slides do not answer it):\n- Planting a cue in the data does not force the model to use it. The model may solve the task from other features and ignore the marker.\n- If the model ignores the cue, a map that marks the cue is **not** faithful, and a metric that ranks that map low would be right. Treating the cue as ground truth would then punish a correct metric.\n- The check applies the lecture's own principle from slide 2: what the model uses must be shown with evidence from the model, not assumed from how the data were built or from what a person expects.\n\n### How the check works\nRemove the cue or move it elsewhere; if the output changes, the model relies on the cue. Interpretation: removing the cue is itself a removal and could create the artifact of slide 4; moving it avoids leaving a blank patch and also shows whether the model follows the cue's position.",
+   "questions": [
+    "Why must the model be shown to use a planted cue before the cue counts as ground truth?",
+    "How does the lecture propose checking that the model uses the cue?",
+    "What would go wrong when evaluating a metric if the model ignored the planted cue?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-7",
+    "evaluation-l2/slide-9"
+   ],
+   "pages": [
+    7,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.faithfulness",
+     "rel": "uses",
+     "note": "The check applies the slide-2 principle that what the model uses must be established with evidence from the model."
+    },
+    {
+     "to": "evaluation-l2.ood-problem",
+     "rel": "complements",
+     "note": "Interpretation: removing the cue is itself a removal that can create an artifact, which is one reason the slide also allows moving it."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.metric-ground-truth",
+   "type": "concept",
+   "title": "Giving a metric something to be right about",
+   "short": "A faithfulness metric can only be trusted after it is tested in settings with a known answer: model-free controls and planted evidence.",
+   "body": "### What it is\nThe summary slide states that **controls and planted evidence** give a metric something to be right about (slide 9). Interpretation: a faithfulness metric produces a number for any map, but on real data there is no known answer to compare it with. Judging the metric itself needs cases where the correct verdict is known in advance.\n\n### The two tools in the lecture\n| Tool | Known answer | Slide |\n|---|---|---|\n| Reference map (centred Gaussian or uniform box) | it knows nothing about the model, so an informative method must beat it | 6 |\n| Planted evidence | the model is shown to use the cue, so the map that marks the cue must rank first | 7 |\n\n### Why it matters in this lecture\n- It is the second half of the lecture's argument: after defining metrics (slides 3 to 5), the lecture asks how to know whether a metric's verdict is right.\n- The worked example (slide 8) shows the control at work: a method fails to beat a centred Gaussian, so its score says little about the model.\n- Interpretation: this is often called evaluating the evaluation, or meta-evaluation; the slides do not use these terms.",
+   "questions": [
+    "What does it mean to give a metric 'something to be right about'?",
+    "Name the two tools the lecture uses for this and the known answer each provides.",
+    "How does the worked example on slide 8 illustrate the idea?"
+   ],
+   "figures": [
+    "evaluation-l2/slide-9",
+    "evaluation-l2/slide-6",
+    "evaluation-l2/slide-7"
+   ],
+   "pages": [
+    6,
+    7,
+    9
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.removal-metrics",
+     "rel": "tests",
+     "note": "Controls and planted evidence are the lecture's ways of checking whether a removal metric's verdict is correct."
+    },
+    {
+     "to": "evaluation-l2.worked-example-control",
+     "rel": "supports",
+     "note": "The worked example shows a control exposing a method whose deletion score is no better than that of a map that ignores the model."
+    }
+   ]
+  },
+  {
+   "id": "evaluation-l2.worked-example-control",
+   "type": "example",
+   "title": "Worked example: a method versus the Gaussian",
+   "short": "A method's deletion AUC of 0.31 is worse than the 0.28 of a centred Gaussian, so the method is not better than a map that ignores the model.",
+   "body": "### Setup\nSlide 8 compares one saliency method with the centred-Gaussian reference map using **deletion AUC**, where lower is better.\n\n| Map | Deletion AUC (lower is better) |\n|---|---|\n| Method | 0.31 |\n| Centred Gaussian (reference) | 0.28 |\n\nThe slide does not name the method, model or dataset, gives no number of images or region size, and reports no spread or uncertainty.\n\n### Steps\n1. Compute deletion AUC for the method and for the reference.\n2. Compare: 0.31 is higher than 0.28, so on this metric the method is **worse** than the reference.\n3. Apply the rule of slide 6: the method does not beat a map that ignores the model, so its score says little about the model.\n\n### Outcome\nThe method is not better than a map that ignores the model. The slide's next step is to **check whether the deletion score is driven by removal artifacts**.\n\n### Lesson\nInterpretation:\n- Without the reference, 0.31 could pass as a reasonable deletion score; the control is what shows it is uninformative.\n- Why check artifacts next: a centred Gaussian removes the middle of the image first. If the model reacts strongly to large black or grey patches (slide 4), or if objects tend to sit in the centre, that alone could make its curve fall fast. A remedy such as fine-tuning with random removal, followed by re-running the comparison, would help separate these explanations.\n- The example does not show that the method is unfaithful, only that this deletion score cannot show that it is faithful.",
+   "questions": [
+    "A method has deletion AUC 0.31 and a centred Gaussian 0.28. Which is better, and what do you conclude about the method?",
+    "Why does the lecture suggest checking for removal artifacts as the next step?",
+    "Does this result show that the method is unfaithful? Explain."
+   ],
+   "figures": [
+    "evaluation-l2/slide-8"
+   ],
+   "pages": [
+    8
+   ],
+   "links": [
+    {
+     "to": "evaluation-l2.beat-the-reference",
+     "rel": "uses",
+     "note": "The example applies the slide-6 rule: 0.31 does not beat the reference's 0.28 on a lower-is-better metric."
+    },
+    {
+     "to": "evaluation-l2.deletion-curve",
+     "rel": "uses",
+     "note": "The comparison is made with deletion AUC, where lower is better."
+    },
+    {
+     "to": "evaluation-l2.reference-map",
+     "rel": "uses",
+     "note": "The control is a centred Gaussian, one of the two reference maps named on slide 6."
+    },
+    {
+     "to": "evaluation-l2.ood-problem",
+     "rel": "motivates",
+     "note": "The slide's next step, checking whether removal artifacts drive the deletion score, points back to the out-of-distribution problem of slide 4."
+    }
+   ]
+  }
+ ]
+}
